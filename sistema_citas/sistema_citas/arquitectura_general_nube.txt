@@ -1,0 +1,238 @@
+Explicación detallada de la arquitectura del sistema en la nube
+
+1) Propósito general del proyecto
+
+Este proyecto consiste en un sistema de gestión de citas médicas con un enfoque académico: ser suficientemente simple para comprenderlo de punta a punta, pero también lo bastante completo para funcionar como una aplicación real desplegada en la nube. El sistema permite administrar pacientes, médicos, consultorios y citas. Además, integra almacenamiento de documentos asociados a cada cita, lo cual agrega valor práctico al flujo de trabajo.
+
+Desde el inicio se tomó una decisión importante de arquitectura: usar una máquina virtual en Google Cloud en lugar de servicios administrados como Cloud Run para la ejecución principal de la aplicación. Esta decisión no elimina el uso de servicios cloud, sino que lo combina con un modelo de infraestructura más controlado. El resultado final es una solución híbrida en el sentido práctico: aplicación contenida en Docker, orquestada con Docker Compose y alojada en una VM de Compute Engine, mientras que componentes de seguridad y almacenamiento se apoyan en servicios administrados de GCP (IAM y Cloud Storage).
+
+2) Visión global de la arquitectura
+
+La arquitectura se divide en capas bien definidas:
+
+- Capa de presentación (Frontend): interfaz web que usa el usuario final.
+- Capa de aplicación (Backend): API que valida reglas de negocio y procesa datos.
+- Capa de persistencia (Base de datos): PostgreSQL para datos estructurados.
+- Capa de archivos (Cloud Storage): bucket para documentos de citas.
+- Capa de identidad y permisos (IAM): controla qué identidad puede acceder al bucket.
+- Capa de infraestructura (VM + Docker): entorno donde corren los contenedores.
+
+Esta separación facilita mantenimiento y evolución. Por ejemplo, se podría cambiar el frontend sin afectar el modelo de datos, o cambiar la base de datos sin reescribir por completo la lógica visual. A nivel operativo, también permite diagnosticar problemas por componente: si falla una carga de documento, se revisa backend + permisos IAM + bucket, no todo el sistema a la vez.
+
+3) Frontend: experiencia del usuario y consumo de API
+
+El frontend está construido como una aplicación web ligera, servida por Nginx, y su función principal es presentar información y enviar acciones del usuario al backend. Desde el punto de vista funcional, la interfaz incluye módulos para:
+
+- Gestión de pacientes.
+- Gestión de médicos.
+- Gestión de especialidades.
+- Gestión de consultorios.
+- Agenda de citas.
+
+Cada operación (crear, listar, actualizar, eliminar) se realiza mediante llamadas HTTP hacia la API. Es decir, el frontend no manipula la base de datos de forma directa. Este patrón evita acoplamientos peligrosos y fortalece el diseño por capas.
+
+Un detalle importante del despliegue es que Nginx actúa como puerta de entrada para el usuario y enruta las solicitudes API al backend. De esta forma, el navegador consume una sola URL pública y el enrutamiento interno lo resuelve la red de Docker Compose.
+
+4) Backend: lógica de negocio y validaciones
+
+El backend se implementó con FastAPI y concentra la lógica central. Sus responsabilidades principales son:
+
+- Exponer endpoints para cada entidad.
+- Validar datos entrantes.
+- Aplicar reglas de negocio.
+- Gestionar errores y respuestas consistentes.
+- Registrar eventos operativos en logs.
+
+Las reglas de negocio son clave para que el sistema no solo “guarde datos”, sino que mantenga coherencia. Ejemplos:
+
+- No duplicar especialidades por descripción.
+- No permitir consultorios repetidos para la combinación médico-especialidad.
+- Evitar colisiones de horario en el mismo consultorio.
+- Validar que paciente, médico y consultorio existan antes de crear cita.
+
+Cuando se integró Cloud Storage, el backend también asumió la responsabilidad de validar archivos (tamaño y cantidad por carga) y persistir únicamente los metadatos en PostgreSQL. Esto evita cargar binarios dentro de la base relacional, práctica recomendada para mantener buen rendimiento y mejor organización.
+
+5) Base de datos PostgreSQL: persistencia estructurada
+
+PostgreSQL se usa para almacenar la información transaccional del sistema. Esto incluye datos personales básicos de pacientes, catálogo de médicos, especialidades, consultorios y citas. Con la mejora de arquitectura, se agregó además una estructura para metadatos de documentos de cita: nombre de archivo, tipo MIME, tamaño, ruta objeto en bucket y fecha de carga.
+
+Separar “datos de negocio” de “archivos binarios” ofrece varias ventajas:
+
+- Mejor desempeño de consultas.
+- Respaldos más manejables.
+- Modelo más limpio para reportes.
+- Mayor claridad para auditoría.
+
+La base corre en un contenedor independiente, con volumen persistente, lo que permite mantener información aunque se reinicien contenedores de frontend o backend.
+
+6) Docker como base de portabilidad y repetibilidad
+
+Docker se utilizó para encapsular cada componente en imágenes reproducibles. Esta elección resuelve uno de los problemas más comunes en proyectos académicos y profesionales: “en mi máquina funciona, en producción no”.
+
+Se construyeron dos imágenes propias:
+
+- Imagen del backend.
+- Imagen del frontend.
+
+La base de datos utiliza una imagen oficial de PostgreSQL.
+
+Con Docker Compose se define toda la topología de servicios (dependencias, puertos, variables de entorno, healthchecks y volúmenes). Gracias a eso, el sistema puede levantarse con pocos comandos y siempre con la misma estructura, tanto en entorno local como en la VM cloud.
+
+Beneficios concretos obtenidos:
+
+- Estandarización del entorno.
+- Menor fricción para despliegue.
+- Actualización por versiones de imagen.
+- Separación clara de responsabilidades por contenedor.
+
+7) Flujo de despliegue: de local a nube
+
+El ciclo de despliegue sigue una secuencia ordenada:
+
+1. Desarrollo y pruebas en entorno local.
+2. Construcción de nuevas imágenes Docker (frontend/backend).
+3. Publicación de imágenes a Docker Hub con un tag de versión.
+4. Acceso a la VM en GCP.
+5. Pull de imágenes desde Docker Hub.
+6. Levantar/actualizar servicios con Docker Compose.
+7. Verificación de salud y funcionalidad.
+
+Este patrón es simple, pero sólido. En lugar de compilar en la VM, se distribuyen artefactos ya empaquetados (imágenes), lo que reduce tiempos de despliegue y hace más trazable qué versión está corriendo.
+
+8) Rol de Google Cloud VM (Compute Engine)
+
+La VM es el host principal del sistema. En ella se instalaron Docker y Docker Compose para ejecutar los contenedores. Al estar en Compute Engine, se obtiene:
+
+- IP pública para acceso externo.
+- Configuración de firewall controlada.
+- Integración con identidades de Google (service account).
+- Flexibilidad para ajustes de CPU, memoria y disco.
+
+La VM funciona como “servidor de aplicación”. Aunque no es un entorno serverless, permite entender profundamente conceptos de infraestructura que son fundamentales en cursos y proyectos de nube: red, permisos, sistema operativo, servicios, logs y ciclo de vida del servidor.
+
+9) GCP networking y acceso público
+
+Para publicar la aplicación se habilitan reglas de tráfico HTTP/HTTPS en la instancia, permitiendo acceso al frontend desde navegador. Internamente, los contenedores se comunican por la red de Docker Compose, sin necesidad de exponer todos los servicios a internet.
+
+Diseño básico de exposición:
+
+- Puerto 80 para frontend (entrada de usuarios).
+- Puerto 8000 para API (uso de validación y pruebas).
+- Puerto 5432 solo para contexto controlado (idealmente no exponer en producción real).
+
+Para fines académicos, esta configuración facilita pruebas. Para endurecer seguridad en un entorno productivo, lo recomendable es restringir mayormente puertos y usar un proxy/ingress con TLS administrado.
+
+10) IAM: control de permisos por identidad
+
+IAM (Identity and Access Management) fue una parte crítica del proyecto. En lugar de poner llaves privadas en el código, la aplicación usa la identidad de la VM (service account) para acceder a Cloud Storage.
+
+¿Qué se hizo?
+
+- Se identificó la service account asociada a la VM.
+- Se otorgó permiso específico sobre el bucket con un rol de objetos (por ejemplo, `roles/storage.objectAdmin`).
+- Se verificó que la instancia tuviera scopes adecuados (`cloud-platform`) para que el token de la metadata permitiera operar sobre APIs de GCP.
+
+Con esto se logra:
+
+- Menor riesgo por exposición de credenciales.
+- Permisos centralizados y auditables.
+- Facilidad para revocar o ajustar acceso sin tocar código.
+
+Un aprendizaje importante fue distinguir entre “tener rol IAM” y “tener scope OAuth en VM”. Ambos deben estar correctos para que la aplicación pueda operar con Storage.
+
+11) Cloud Storage y documentos de citas
+
+Cloud Storage se incorporó para soportar adjuntos en el flujo de citas. El comportamiento esperado es:
+
+1. Usuario crea o edita cita desde frontend.
+2. Usuario selecciona uno o más documentos.
+3. Frontend envía archivos al endpoint de carga.
+4. Backend valida tamaño/cantidad.
+5. Backend sube archivos al bucket.
+6. Backend guarda metadatos en PostgreSQL.
+7. Logs registran resultado del evento.
+
+Este diseño mezcla lo mejor de ambos mundos:
+
+- En PostgreSQL queda la trazabilidad estructurada.
+- En Storage queda el contenido binario escalable.
+
+Además, al usar bucket se habilita una base para mejoras futuras, como versionado, retención, clasificación por prefijos y políticas de ciclo de vida de archivos.
+
+12) Variables de entorno y configuración desacoplada
+
+La configuración sensible o cambiante se maneja por variables de entorno, por ejemplo:
+
+- Credenciales/URL de base de datos.
+- Activación de seed inicial.
+- Activación de Cloud Storage.
+- Nombre del bucket.
+- Límites de carga.
+
+Esto evita “hardcodear” datos de infraestructura dentro del código y permite que la misma imagen Docker funcione en distintos ambientes solo cambiando el archivo `.env`.
+
+13) Logs y evidencia operativa
+
+El sistema registra eventos de arranque y eventos funcionales. Esto aporta evidencia para la actividad académica y también utilidad real de operación. Entre los eventos relevantes:
+
+- Resumen de seed al iniciar.
+- Estado de configuración de storage.
+- Creación/actualización/eliminación de citas.
+- Resultado de carga de documentos.
+
+La observabilidad en este proyecto no se limita a “ver si responde”; también permite explicar por qué falló una operación (por ejemplo, bucket incorrecto, permisos, scopes o variables faltantes).
+
+14) Seguridad aplicada en contexto académico
+
+Aunque el proyecto es básico, se aplicaron decisiones razonables de seguridad:
+
+- Separación de capas.
+- Uso de IAM en lugar de llaves embebidas.
+- Roles específicos por recurso.
+- Validación de entradas y reglas de negocio en backend.
+- Manejo controlado de errores al usuario.
+- Parametrización por entorno.
+
+En un entorno más avanzado se podría complementar con:
+
+- HTTPS completo con certificado administrado.
+- Políticas de CORS más estrictas.
+- WAF o reglas de protección adicional.
+- Copias de seguridad programadas y cifrado reforzado.
+
+15) Costos y sostenibilidad de despliegue
+
+La solución está diseñada para bajo costo: una VM pequeña con contenedores ligeros, más un bucket de almacenamiento de uso moderado. Este enfoque permite operar en créditos académicos de GCP sin necesidad de servicios más complejos o más caros.
+
+Buenas prácticas para controlar costo:
+
+- Apagar VM cuando no se usa.
+- Monitorear uso de disco y almacenamiento.
+- Limitar tamaño y cantidad de archivos por cita.
+- Evitar exposición innecesaria de servicios.
+
+16) Dificultades encontradas y resolución
+
+Durante la implementación aparecieron varios desafíos reales:
+
+- Diferencias entre versiones de archivos de despliegue local y cloud.
+- Variables de entorno incompletas dentro del contenedor.
+- Errores IAM por rol/scopes.
+- Bucket mal configurado por nombre.
+- Necesidad de ajustar Nginx para tamaño de carga.
+
+Cada dificultad fue resuelta con una estrategia de diagnóstico incremental:
+
+- Verificar `health` del backend.
+- Inspeccionar variables dentro del contenedor.
+- Revisar logs de backend.
+- Validar identidad de la VM.
+- Confirmar existencia del bucket y nombre exacto.
+
+Este proceso dejó un aprendizaje valioso: en nube, la mayoría de fallos no son del “código puro”, sino de integración entre infraestructura, configuración y permisos.
+
+17) Conclusión general
+
+La arquitectura final cumple el objetivo académico y funcional del proyecto. Se logró una aplicación de citas médicas con despliegue real en nube, ejecución por contenedores y una integración útil de servicios de GCP (IAM + Cloud Storage). El sistema no solo permite CRUD básico, sino también adjuntar documentos de citas con trazabilidad y control.
+
+Desde la perspectiva formativa, este proyecto aporta experiencia práctica en todo el ciclo de vida: diseño, construcción, contenerización, publicación de imágenes, despliegue en VM, configuración de permisos, pruebas, solución de errores y documentación. Es una base sólida para evolucionar a etapas más avanzadas, como automatización CI/CD, monitoreo más robusto y endurecimiento de seguridad orientado a producción.
