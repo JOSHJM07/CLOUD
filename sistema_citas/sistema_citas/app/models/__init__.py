@@ -1,1 +1,1 @@
-from .models import Especialidad, Medico, Paciente, Consultorio, Cita
+from .models import Cita, CitaDocumento, Consultorio, Especialidad, Medico, Paciente

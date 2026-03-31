@@ -2,6 +2,7 @@ from sqlalchemy import (
     CheckConstraint,
     Column,
     Date,
+    DateTime,
     ForeignKey,
     Index,
     Integer,
@@ -9,6 +10,7 @@ from sqlalchemy import (
     Text,
     Time,
     UniqueConstraint,
+    func,
 )
 from sqlalchemy.orm import relationship
 
@@ -122,3 +124,27 @@ class Cita(Base):
     paciente = relationship("Paciente", back_populates="citas")
     consultorio = relationship("Consultorio", back_populates="citas")
     medico = relationship("Medico", back_populates="citas")
+    documentos = relationship("CitaDocumento", back_populates="cita", cascade="all, delete-orphan")
+
+
+class CitaDocumento(Base):
+    __tablename__ = "cita_documento"
+    __table_args__ = (
+        Index("ix_cita_documento_id_cita", "id_cita"),
+        Index("ix_cita_documento_fecha_carga", "fecha_carga"),
+    )
+
+    id_documento = Column(Integer, primary_key=True, index=True)
+    id_cita = Column(
+        Integer,
+        ForeignKey("cita.id_cita", onupdate="CASCADE", ondelete="CASCADE"),
+        nullable=False,
+    )
+    nombre_archivo = Column(String(255), nullable=False)
+    tipo_mime = Column(String(120))
+    tamano_bytes = Column(Integer, nullable=False)
+    gcs_object_name = Column(String(500), nullable=False, unique=True)
+    gcs_uri = Column(String(700), nullable=False)
+    fecha_carga = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+    cita = relationship("Cita", back_populates="documentos")

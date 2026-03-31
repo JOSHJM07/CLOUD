@@ -389,7 +389,7 @@
     letter-spacing: 0.5px;
   }
   input[type="text"], input[type="email"], input[type="number"],
-  input[type="date"], input[type="time"], select, textarea {
+  input[type="date"], input[type="time"], input[type="file"], select, textarea {
     padding: 9px 12px;
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
@@ -407,6 +407,11 @@
   }
   textarea { resize: vertical; min-height: 80px; }
   select { cursor: pointer; }
+  .form-hint {
+    margin-top: 2px;
+    font-size: 12px;
+    color: var(--text3);
+  }
 
   /* AVATAR */
   .avatar {
@@ -631,10 +636,10 @@
         </div>
         <table>
           <thead><tr>
-            <th>ID</th><th>Paciente</th><th>Médico</th><th>Fecha</th><th>Hora</th><th>Estado</th><th>Motivo</th><th>Acciones</th>
+            <th>ID</th><th>Paciente</th><th>Médico</th><th>Fecha</th><th>Hora</th><th>Estado</th><th>Motivo</th><th>Documentos</th><th>Acciones</th>
           </tr></thead>
           <tbody id="citas-tbody">
-            <tr><td colspan="8" class="empty-state"><div class="icon">📅</div><p>No hay citas registradas</p></td></tr>
+            <tr><td colspan="9" class="empty-state"><div class="icon">📅</div><p>No hay citas registradas</p></td></tr>
           </tbody>
         </table>
       </div>
@@ -785,12 +790,15 @@ const PAGE_TITLES = {
 };
 
 // ─── API ───────────────────────────────────────────────────
-async function api(method, path, body) {
-  const opts = {
-    method,
-    headers: { 'Content-Type': 'application/json' }
-  };
-  if (body) opts.body = JSON.stringify(body);
+async function api(method, path, body, options = {}) {
+  const isFormData = options.isFormData === true;
+  const opts = { method, headers: {} };
+  if (isFormData) {
+    if (body) opts.body = body;
+  } else {
+    opts.headers['Content-Type'] = 'application/json';
+    if (body) opts.body = JSON.stringify(body);
+  }
   const r = await fetch(API_BASE + path, opts);
   if (!r.ok) {
     const err = await r.json().catch(() => ({ detail: r.statusText }));
@@ -805,7 +813,9 @@ async function api(method, path, body) {
     throw new Error(detail || 'Error del servidor');
   }
   if (r.status === 204) return null;
-  return r.json();
+  const contentType = (r.headers.get('content-type') || '').toLowerCase();
+  if (contentType.includes('application/json')) return r.json();
+  return r.text();
 }
 
 async function checkConnection() {
@@ -965,11 +975,12 @@ const colors = ['', 'amber', 'blue', 'purple'];
 function renderCitas() {
   const tb = document.getElementById('citas-tbody');
   if (!cache.citas.length) {
-    tb.innerHTML = '<tr><td colspan="8" class="empty-state"><div class="icon">📅</div><p>No hay citas registradas</p></td></tr>';
+    tb.innerHTML = '<tr><td colspan="9" class="empty-state"><div class="icon">📅</div><p>No hay citas registradas</p></td></tr>';
     return;
   }
   tb.innerHTML = cache.citas.map(c => {
     const medico = getMedicoName(c.id_medico);
+    const totalDocumentos = Array.isArray(c.documentos) ? c.documentos.length : 0;
     return `<tr>
       <td><span style="color:var(--text3);font-size:13px">#${c.id_cita}</span></td>
       <td>${c.cedula_paciente}</td>
@@ -978,6 +989,7 @@ function renderCitas() {
       <td>${displayTime(c.hora)}</td>
       <td>${estadoBadge(c.estado)}</td>
       <td style="font-size:13px;color:var(--text2);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.motivo || '—'}</td>
+      <td>${totalDocumentos ? `<span class="badge badge-blue">${totalDocumentos}</span>` : '<span style="color:var(--text3);font-size:13px">0</span>'}</td>
       <td><div class="row-actions">
         <button class="icon-btn" onclick="editCita(${c.id_cita})" title="Editar">✎</button>
         <button class="icon-btn danger" onclick="confirmDelete('cita', ${c.id_cita}, 'cita #${c.id_cita}')" title="Eliminar">✕</button>
@@ -1120,6 +1132,13 @@ const FORMS = {
         </select></div>
       <div class="form-group full"><label>Motivo</label>
         <textarea id="f_motivo">${d.motivo || ''}</textarea></div>
+      <div class="form-group full"><label>Documentos de respaldo (opcional)</label>
+        <input type="file" id="f_documentos" multiple>
+        <div class="form-hint">
+          Máximo por envío: 3 archivos de hasta 5 MB cada uno.
+          ${Array.isArray(d.documentos) ? `Documentos actuales: ${d.documentos.length}.` : ''}
+        </div>
+      </div>
     </div>`,
   paciente: (d = {}) => `
     <div class="form-grid">
@@ -1217,6 +1236,19 @@ function getFormData(entity) {
   }
 }
 
+function getSelectedFiles() {
+  const input = document.getElementById('f_documentos');
+  if (!input || !input.files) return [];
+  return Array.from(input.files);
+}
+
+async function uploadCitaFiles(idCita, files) {
+  if (!files.length) return [];
+  const formData = new FormData();
+  files.forEach(file => formData.append('archivos', file));
+  return api('POST', `/citas/${encodeURIComponent(String(idCita))}/documentos`, formData, { isFormData: true });
+}
+
 // ─── CRUD ACTIONS ─────────────────────────────────────────
 let activeEntity = null;
 
@@ -1233,18 +1265,47 @@ function openCreateModal() {
 async function submitForm() {
   const entity = activeEntity;
   const data = getFormData(entity);
+  const files = entity === 'cita' ? getSelectedFiles() : [];
   try {
     const path = endpointForEntity(entity);
+    let savedRecord = null;
+
     if (editingId !== null) {
       const idPart = encodeURIComponent(String(editingId));
-      await api('PUT', path + idPart, data);
-      showToast('Registro actualizado', 'success');
+      savedRecord = await api('PUT', path + idPart, data);
     } else {
-      await api('POST', path, data);
-      showToast('Registro creado exitosamente', 'success');
+      savedRecord = await api('POST', path, data);
     }
+
+    let uploadWarning = null;
+    let uploadedCount = 0;
+    if (entity === 'cita' && files.length) {
+      const idCita = editingId !== null ? editingId : savedRecord?.id_cita;
+      if (idCita) {
+        try {
+          const uploaded = await uploadCitaFiles(idCita, files);
+          uploadedCount = Array.isArray(uploaded) ? uploaded.length : 0;
+        } catch (uploadError) {
+          uploadWarning = uploadError.message;
+        }
+      }
+    }
+
     closeModal('modal-main');
     await loadPage(currentPage);
+
+    if (uploadWarning) {
+      showToast('Cita guardada, pero hubo error al subir documentos: ' + uploadWarning, 'error');
+      return;
+    }
+
+    if (editingId !== null) {
+      const suffix = uploadedCount ? ` y ${uploadedCount} documento(s) cargados` : '';
+      showToast(`Registro actualizado${suffix}`, 'success');
+      return;
+    }
+    const suffix = uploadedCount ? ` y ${uploadedCount} documento(s) cargados` : '';
+    showToast(`Registro creado exitosamente${suffix}`, 'success');
   } catch(e) {
     showToast('Error: ' + e.message, 'error');
   }

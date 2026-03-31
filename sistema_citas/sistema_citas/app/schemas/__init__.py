@@ -3,5 +3,5 @@ from .schemas import (
     MedicoCreate, MedicoUpdate, MedicoOut,
     PacienteCreate, PacienteUpdate, PacienteOut,
     ConsultorioCreate, ConsultorioUpdate, ConsultorioOut,
-    CitaCreate, CitaUpdate, CitaOut,
+    CitaCreate, CitaUpdate, CitaOut, CitaDocumentoOut,
 )

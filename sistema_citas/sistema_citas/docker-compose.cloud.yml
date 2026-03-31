@@ -24,6 +24,12 @@ services:
     environment:
       DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/sistema_citas
       ENABLE_STARTUP_SEED: ${ENABLE_STARTUP_SEED:-true}
+      ENABLE_GCS_UPLOAD: ${ENABLE_GCS_UPLOAD:-false}
+      GCS_BUCKET_NAME: ${GCS_BUCKET_NAME:-}
+      GCS_OBJECT_PREFIX: ${GCS_OBJECT_PREFIX:-citas}
+      MAX_FILES_PER_UPLOAD: ${MAX_FILES_PER_UPLOAD:-3}
+      MAX_FILES_PER_CITA: ${MAX_FILES_PER_CITA:-5}
+      MAX_UPLOAD_FILE_SIZE_MB: ${MAX_UPLOAD_FILE_SIZE_MB:-5}
     depends_on:
       db:
         condition: service_healthy

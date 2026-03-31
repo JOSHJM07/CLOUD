@@ -1,4 +1,4 @@
-from datetime import date, time
+from datetime import date, datetime, time
 from typing import Literal, Optional
 
 from pydantic import BaseModel, EmailStr, Field, field_validator
@@ -146,7 +146,20 @@ class CitaUpdate(BaseModel):
     estado: Optional[Literal["pendiente", "confirmada", "cancelada", "completada"]] = None
 
 
+class CitaDocumentoOut(BaseModel):
+    id_documento: int
+    id_cita: int
+    nombre_archivo: str
+    tipo_mime: Optional[str] = None
+    tamano_bytes: int
+    gcs_uri: str
+    fecha_carga: datetime
+
+    model_config = {"from_attributes": True}
+
+
 class CitaOut(CitaBase):
     id_cita: int
+    documentos: list[CitaDocumentoOut] = Field(default_factory=list)
 
     model_config = {"from_attributes": True}

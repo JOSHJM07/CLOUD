@@ -15,6 +15,7 @@ from app.routes import (
     medico_router,
     paciente_router,
 )
+from app.services import storage_status
 
 app = FastAPI(
     title="Sistema de Gestion de Citas",
@@ -39,6 +40,7 @@ def startup() -> None:
     Base.metadata.create_all(bind=engine)
     summary = run_startup_seed()
     logger.info("Startup seed summary: %s", summary)
+    logger.info("Cloud storage config: %s", storage_status())
 
 
 STATIC_DIR = Path(__file__).parent / "static"
@@ -53,7 +55,7 @@ app.include_router(cita_router)
 
 @app.get("/health", tags=["Health"])
 def health_check():
-    return {"status": "ok"}
+    return {"status": "ok", "storage": storage_status()}
 
 
 @app.get("/", include_in_schema=False)
