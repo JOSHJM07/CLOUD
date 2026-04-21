@@ -529,20 +529,20 @@
       <span class="icon">⊞</span> Dashboard
     </button>
     <button class="nav-item" data-page="citas" onclick="showPage('citas')">
-      <span class="icon">📅</span> Citas
+      <span class="icon"></span> Citas
     </button>
     <div class="nav-section">Administración</div>
     <button class="nav-item" data-page="pacientes" onclick="showPage('pacientes')">
-      <span class="icon">👤</span> Pacientes
+      <span class="icon"></span> Pacientes
     </button>
     <button class="nav-item" data-page="medicos" onclick="showPage('medicos')">
-      <span class="icon">🩺</span> Médicos
+      <span class="icon"></span> Médicos
     </button>
     <button class="nav-item" data-page="especialidades" onclick="showPage('especialidades')">
-      <span class="icon">🏷️</span> Especialidades
+      <span class="icon"></span> Especialidades
     </button>
     <button class="nav-item" data-page="consultorios" onclick="showPage('consultorios')">
-      <span class="icon">🏥</span> Consultorios
+      <span class="icon"></span> Consultorios
     </button>
   </nav>
   <div class="sidebar-footer">v1.0.0 · FastAPI Backend</div>
@@ -571,25 +571,25 @@
     <div class="page active" id="page-dashboard">
       <div class="stats-grid">
         <div class="stat-card">
-          <div class="stat-icon" style="background:var(--teal-light);color:var(--teal)">📅</div>
+          <div class="stat-icon" style="background:var(--teal-light);color:var(--teal)"></div>
           <div class="stat-label">Total Citas</div>
           <div class="stat-value" id="stat-citas">—</div>
           <div class="stat-sub">en el sistema</div>
         </div>
         <div class="stat-card">
-          <div class="stat-icon" style="background:var(--blue-light);color:var(--blue)">👤</div>
+          <div class="stat-icon" style="background:var(--blue-light);color:var(--blue)"></div>
           <div class="stat-label">Pacientes</div>
           <div class="stat-value" id="stat-pacientes">—</div>
           <div class="stat-sub">registrados</div>
         </div>
         <div class="stat-card">
-          <div class="stat-icon" style="background:var(--purple-light);color:var(--purple)">🩺</div>
+          <div class="stat-icon" style="background:var(--purple-light);color:var(--purple)"></div>
           <div class="stat-label">Médicos</div>
           <div class="stat-value" id="stat-medicos">—</div>
           <div class="stat-sub">activos</div>
         </div>
         <div class="stat-card">
-          <div class="stat-icon" style="background:var(--amber-light);color:var(--amber)">🏥</div>
+          <div class="stat-icon" style="background:var(--amber-light);color:var(--amber)"></div>
           <div class="stat-label">Consultorios</div>
           <div class="stat-value" id="stat-consultorios">—</div>
           <div class="stat-sub">disponibles</div>
@@ -630,7 +630,7 @@
         <div class="table-header">
           <div class="table-title">Todas las citas</div>
           <div class="search-box">
-            <span>🔍</span>
+            <span></span>
             <input type="text" placeholder="Buscar..." oninput="filterTable('citas-tbody', this.value)">
           </div>
         </div>
@@ -639,7 +639,7 @@
             <th>ID</th><th>Paciente</th><th>Médico</th><th>Fecha</th><th>Hora</th><th>Estado</th><th>Motivo</th><th>Documentos</th><th>Acciones</th>
           </tr></thead>
           <tbody id="citas-tbody">
-            <tr><td colspan="9" class="empty-state"><div class="icon">📅</div><p>No hay citas registradas</p></td></tr>
+            <tr><td colspan="9" class="empty-state"><div class="icon"></div><p>No hay citas registradas</p></td></tr>
           </tbody>
         </table>
       </div>
@@ -651,7 +651,7 @@
         <div class="table-header">
           <div class="table-title">Pacientes registrados</div>
           <div class="search-box">
-            <span>🔍</span>
+            <span></span>
             <input type="text" placeholder="Buscar..." oninput="filterTable('pacientes-tbody', this.value)">
           </div>
         </div>
@@ -660,7 +660,7 @@
             <th>Cédula</th><th>Nombre</th><th>Edad</th><th>Tipo Sangre</th><th>Teléfono</th><th>Correo</th><th>Acciones</th>
           </tr></thead>
           <tbody id="pacientes-tbody">
-            <tr><td colspan="7" class="empty-state"><div class="icon">👤</div><p>No hay pacientes registrados</p></td></tr>
+            <tr><td colspan="7" class="empty-state"><div class="icon"></div><p>No hay pacientes registrados</p></td></tr>
           </tbody>
         </table>
       </div>
@@ -672,7 +672,7 @@
         <div class="table-header">
           <div class="table-title">Médicos del sistema</div>
           <div class="search-box">
-            <span>🔍</span>
+            <span></span>
             <input type="text" placeholder="Buscar..." oninput="filterTable('medicos-tbody', this.value)">
           </div>
         </div>
@@ -681,7 +681,7 @@
             <th>ID</th><th>Nombre</th><th>Correo</th><th>Acciones</th>
           </tr></thead>
           <tbody id="medicos-tbody">
-            <tr><td colspan="4" class="empty-state"><div class="icon">🩺</div><p>No hay médicos registrados</p></td></tr>
+            <tr><td colspan="4" class="empty-state"><div class="icon"></div><p>No hay médicos registrados</p></td></tr>
           </tbody>
         </table>
       </div>
@@ -698,7 +698,7 @@
             <th>ID</th><th>Descripción</th><th>Acciones</th>
           </tr></thead>
           <tbody id="especialidades-tbody">
-            <tr><td colspan="3" class="empty-state"><div class="icon">🏷️</div><p>No hay especialidades registradas</p></td></tr>
+            <tr><td colspan="3" class="empty-state"><div class="icon"></div><p>No hay especialidades registradas</p></td></tr>
           </tbody>
         </table>
       </div>
@@ -715,7 +715,7 @@
             <th>ID</th><th>Médico</th><th>Especialidad</th><th>Acciones</th>
           </tr></thead>
           <tbody id="consultorios-tbody">
-            <tr><td colspan="4" class="empty-state"><div class="icon">🏥</div><p>No hay consultorios registrados</p></td></tr>
+            <tr><td colspan="4" class="empty-state"><div class="icon"></div><p>No hay consultorios registrados</p></td></tr>
           </tbody>
         </table>
       </div>
@@ -975,7 +975,7 @@ const colors = ['', 'amber', 'blue', 'purple'];
 function renderCitas() {
   const tb = document.getElementById('citas-tbody');
   if (!cache.citas.length) {
-    tb.innerHTML = '<tr><td colspan="9" class="empty-state"><div class="icon">📅</div><p>No hay citas registradas</p></td></tr>';
+    tb.innerHTML = '<tr><td colspan="9" class="empty-state"><div class="icon"></div><p>No hay citas registradas</p></td></tr>';
     return;
   }
   tb.innerHTML = cache.citas.map(c => {
@@ -1001,7 +1001,7 @@ function renderCitas() {
 function renderPacientes() {
   const tb = document.getElementById('pacientes-tbody');
   if (!cache.pacientes.length) {
-    tb.innerHTML = '<tr><td colspan="7" class="empty-state"><div class="icon">👤</div><p>No hay pacientes</p></td></tr>';
+    tb.innerHTML = '<tr><td colspan="7" class="empty-state"><div class="icon"></div><p>No hay pacientes</p></td></tr>';
     return;
   }
   tb.innerHTML = cache.pacientes.map((p, i) => {
@@ -1030,7 +1030,7 @@ function renderPacientes() {
 function renderMedicos() {
   const tb = document.getElementById('medicos-tbody');
   if (!cache.medicos.length) {
-    tb.innerHTML = '<tr><td colspan="4" class="empty-state"><div class="icon">🩺</div><p>No hay médicos</p></td></tr>';
+    tb.innerHTML = '<tr><td colspan="4" class="empty-state"><div class="icon"></div><p>No hay médicos</p></td></tr>';
     return;
   }
   tb.innerHTML = cache.medicos.map((m, i) => {
@@ -1056,7 +1056,7 @@ function renderMedicos() {
 function renderEspecialidades() {
   const tb = document.getElementById('especialidades-tbody');
   if (!cache.especialidades.length) {
-    tb.innerHTML = '<tr><td colspan="3" class="empty-state"><div class="icon">🏷️</div><p>No hay especialidades</p></td></tr>';
+    tb.innerHTML = '<tr><td colspan="3" class="empty-state"><div class="icon"></div><p>No hay especialidades</p></td></tr>';
     return;
   }
   tb.innerHTML = cache.especialidades.map(e =>
@@ -1074,7 +1074,7 @@ function renderEspecialidades() {
 function renderConsultorios() {
   const tb = document.getElementById('consultorios-tbody');
   if (!cache.consultorios.length) {
-    tb.innerHTML = '<tr><td colspan="4" class="empty-state"><div class="icon">🏥</div><p>No hay consultorios</p></td></tr>';
+    tb.innerHTML = '<tr><td colspan="4" class="empty-state"><div class="icon"></div><p>No hay consultorios</p></td></tr>';
     return;
   }
   tb.innerHTML = cache.consultorios.map(c =>
